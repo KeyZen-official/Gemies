@@ -90,10 +90,22 @@ export function ShippingPanel({ orderId, onChange }) {
           : <Badge tone="neutral">No shipment</Badge>}
       </div>
 
+      {/* The exact variables, not a generic "not configured". Credentials and
+          the parcel measurements fail in completely different ways -- the
+          first is a login error, the second a 503 at booking time -- and an
+          operator reading this needs to know which one they are looking at. */}
       {!data.shippingConfigured && (
         <Tile tone="warning" icon={AlertTriangle}>
-          Shiprocket is not configured. Set SHIPROCKET_EMAIL, SHIPROCKET_PASSWORD and
-          SHIPROCKET_PICKUP_LOCATION, then restart the API.
+          <strong className="font-semibold">Shipping cannot book a parcel yet.</strong>{' '}
+          {data.shippingMissing?.length
+            ? <>Set {data.shippingMissing.join(', ')} in the environment, then restart the API.</>
+            : <>Set SHIPROCKET_EMAIL, SHIPROCKET_PASSWORD and SHIPROCKET_PICKUP_LOCATION, then restart the API.</>}
+          {data.shippingMissing?.some((name) => name.startsWith('PACKAGE_')) && (
+            <span className="mt-1 block text-admin-text-2">
+              Measure a packed parcel for the PACKAGE_ values. Shiprocket prices on volumetric
+              weight, so these are not estimated.
+            </span>
+          )}
         </Tile>
       )}
 

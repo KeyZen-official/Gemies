@@ -23,9 +23,20 @@ process.env.BUSINESS_NAME = 'SWAYAMSIDDHA FASHION AND LIFESTYLES';
 process.env.BUSINESS_ADDRESS = 'Acropolis, Borivali West, Mumbai 400103';
 process.env.BUSINESS_EMAIL = 'swayamsiddha20@gmail.com';
 process.env.BUSINESS_TAX_ID = '27BSUPK4844B1ZH';
+// Shipping is configured *completely* here, not just with credentials.
+// "Configured" on the dashboard now means "could actually book a parcel",
+// which includes the pickup PIN and the four parcel measurements -- the
+// integration-health test below asserts that a configured integration with
+// failed jobs reports `error`, and a half-configured fixture would make it
+// pass for the wrong reason.
 process.env.SHIPROCKET_EMAIL = 'ship@example.invalid';
 process.env.SHIPROCKET_PASSWORD = 'fixture';
 process.env.SHIPROCKET_PICKUP_LOCATION = 'Primary';
+process.env.SHIPROCKET_PICKUP_PINCODE = '400103';
+process.env.PACKAGE_WEIGHT_KG = '0.4';
+process.env.PACKAGE_LENGTH_CM = '25';
+process.env.PACKAGE_BREADTH_CM = '20';
+process.env.PACKAGE_HEIGHT_CM = '4';
 process.env.RUN_WORKER = 'false';
 
 await startMongo();

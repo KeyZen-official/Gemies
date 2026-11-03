@@ -3,7 +3,7 @@ import React,{useState,useEffect,useRef} from 'react';
 import Link from 'next/link';
 import {useSearchParams,useRouter,useParams} from 'next/navigation';
 import {api,money} from './api.js';
-import {useStore,useResource,PageTitle,Field,Loading,Empty,ErrorState,AddressFields,Summary,Icon} from './components.jsx';
+import {useStore,useResource,PageTitle,Field,Loading,Empty,ErrorState,AddressFields,Icon} from './components.jsx';
 import {launchPayment} from './storefront.jsx';
 import {Button,buttonClasses} from './components/ui/Button.jsx';
 import {Pagination} from './components/ui/Pagination.jsx';
@@ -11,6 +11,8 @@ import {badgeClasses} from './components/ui/Badge.js';
 import {AuthField} from './components/auth/AuthField.jsx';
 import {Wallet} from './components/account/Wallet.jsx';
 import {OrderExchange} from './components/account/ExchangeRequest.jsx';
+import {OrderProgress,ShipmentSteps} from './components/account/OrderProgress.jsx';
+import {OrderSummaryCard} from './components/account/OrderSummaryCard.jsx';
 import {authContent,promoLabel,promoImage} from './data/auth-content.js';
 /**
  * Every authentication screen: sign in, create account, forgot, reset, verify
@@ -300,7 +302,182 @@ function OrderHistory(){
 }
 function Addresses(){const {data,loading,error,reload}=useResource('/auth/addresses'),{notify}=useStore(),[address,setAddress]=useState({country:'India'}),[show,setShow]=useState(false);return <><div className="my-[22px] flex flex-wrap items-start justify-between gap-5 md:flex-nowrap md:items-center [&_h2]:m-0 [&_h2]:text-[22px] md:[&_h2]:text-2xl"><h2>Saved addresses</h2><button className={buttonClasses('outline')} onClick={()=>setShow(!show)}>{show?'Close':'Add address'}</button></div>{show&&<form className="mb-5 rounded-lg border border-rule bg-white p-[22px] md:mb-6 md:p-7 [&_h2]:text-[21px] md:[&_h2]:text-[22px] [&_p]:text-xs" onSubmit={async e=>{e.preventDefault();try{await api('/auth/addresses',{method:'POST',body:address});setAddress({country:'India'});setShow(false);reload();notify('Address saved.');}catch(e){notify(e.message);}}}><AddressFields value={address} onChange={setAddress}/><button className={buttonClasses('dark')}>Save address</button></form>}{loading?<Loading/>:error?<ErrorState message={error}/>:<div className="mt-7 grid grid-cols-1 gap-0 sm:grid-cols-2 sm:gap-5">{data.map(a=><article className="mb-5 rounded-lg border border-rule bg-white p-[22px] md:mb-6 md:p-7 [&_h2]:text-[21px] md:[&_h2]:text-[22px] [&_p]:text-xs" key={a.id}><h3>{a.details.name}</h3><p>{a.details.line1}<br/>{a.details.line2}<br/>{a.details.city}, {a.details.state} {a.details.postalCode}</p><p>{a.details.phone}</p><button className="py-2.5 text-[11px] underline underline-offset-4" onClick={async()=>{try{await api(`/auth/addresses/${a.id}`,{method:'DELETE'});reload();}catch(e){notify(e.message);}}}>Remove address</button></article>)}{!data.length&&<p>No saved addresses yet.</p>}</div>}</>;}
 export function Order(){const {id}=useParams(),{user,ready}=useStore();if(!ready)return <Loading/>;if(!user)return <Empty title="Sign in to see your order" text="Your order details are private." link={`/login?next=/orders/${id}`} label="Sign in"/>;return <OrderView id={id}/>;}
-function OrderView({id}){const {data:o,loading,error,reload}=useResource(`/orders/${id}`),{user,notify}=useStore(),router=useRouter(),[busy,setBusy]=useState(false);useEffect(()=>{if(o&&['pending','refunding'].includes(o.payment_status)){const t=setInterval(reload,10000);return()=>clearInterval(t);}},[o?.payment_status]);if(loading&&!o)return <Loading/>;if(error)return <ErrorState message={error} onRetry={reload}/>;if(!o)return null;async function action(path,body){setBusy(true);try{await api(path,{method:'POST',body});reload();}catch(e){notify(e.message);}finally{setBusy(false);}}return <main className="mx-auto min-h-[500px] w-[calc(100%-24px)] max-w-shell pt-6 pb-11 md:w-[calc(100%-32px)] md:pt-8 md:pb-14 lg:w-[calc(100%-64px)] lg:pt-12 lg:pb-20"><div className="mb-6 flex flex-wrap items-center gap-2 text-[10px] text-ink-soft md:mb-8 md:gap-3 md:text-[11px] [&_a:hover]:text-ink"><Link href="/account">My account</Link><span>/</span>Order #{o.number}</div><PageTitle eyebrow={o.payment_status==='paid'?'THANK YOU FOR YOUR ORDER':'ORDER DETAILS'} title={`Order #${o.number}`} text={`Placed ${new Date(o.created_at).toLocaleString()}`}><span className={badgeClasses(o.payment_status)}>{o.payment_status}</span></PageTitle>{o.status==='review'&&<p className="rounded-[5px] border border-[#e6ddcb] bg-[#f5efe4] px-[18px] py-3.5 text-xs leading-relaxed text-[#765e35]">Your payment arrived after the reservation ended. The order is under review and a refund has been queued. It will not be shipped.</p>}{o.payment_status==='pending'&&<p className="rounded-[5px] border border-[#e6ddcb] bg-[#f5efe4] px-[18px] py-3.5 text-xs leading-relaxed text-[#765e35]">Payment has not been confirmed. Only captured payments verified by the server complete an order.</p>}<div className="grid grid-cols-1 items-start gap-9 lg:grid-cols-[minmax(0,1.7fr)_minmax(290px,1fr)] lg:gap-[4%] xl:gap-[6%]"><div><div className="mt-0 mb-10 flex justify-between gap-[7px] border-b border-rule pb-6 md:mt-2.5 md:gap-2.5">{['confirmed','processing','shipped','delivered'].map((s,i)=><div key={s} className={`flex flex-col items-center gap-[9px] text-[9px] capitalize md:text-[10px] ${['confirmed','processing','shipped','delivered'].indexOf(o.status)>=i ? 'text-ink [&>span]:border-ink [&>span]:bg-ink [&>span]:text-white' : 'text-[#aaa]'}`}><span className="grid size-[26px] place-items-center rounded-full border border-[#ccc]">{['confirmed','processing','shipped','delivered'].indexOf(o.status)>=i?<Icon name="check" size={15}/>:i+1}</span>{s}</div>)}</div><div>{o.items.map(i=><div className="grid grid-cols-[75px_minmax(0,1fr)_auto] items-start gap-3 border-b border-rule py-[22px] first:pt-0 md:grid-cols-[105px_1fr_auto] md:gap-[23px] md:py-6" key={i.id}><img src={i.image} alt={i.name}/><div><h3>{i.name}</h3><p>{i.size} · {i.color}</p><p>Qty {i.quantity} × {money(i.unit_price,o.currency)}</p></div><strong>{money(i.quantity*i.unit_price,o.currency)}</strong></div>)}</div><div className="mt-7 grid grid-cols-1 gap-0 sm:grid-cols-2 sm:gap-5"><section className="mb-5 rounded-lg border border-rule bg-white p-[22px] md:mb-6 md:p-7 [&_h2]:text-[21px] md:[&_h2]:text-[22px] [&_p]:text-xs"><h3>Delivery address</h3><p>{o.address.name}<br/>{o.address.line1}<br/>{o.address.line2}<br/>{o.address.city}, {o.address.state} {o.address.postalCode}<br/>{o.address.phone}</p></section><ShipmentTracking id={id}/></div>{o.refund&&<section className="mb-5 rounded-lg border border-rule bg-white p-[22px] md:mb-6 md:p-7 [&_h2]:text-[21px] md:[&_h2]:text-[22px] [&_p]:text-xs"><h3>Refund</h3><p>{o.refund.status} · {money(o.refund.amount,o.currency)}</p><p>{o.refund.reason}</p></section>}</div><Summary quote={o}>{o.invoice?<a className={buttonClasses('outline','mt-3 w-full')} href={`/api/orders/${o.id}/invoice`}>Download invoice</a>:o.payment_status==='paid'&&<p>Invoice preparation is queued.</p>}{o.status==='pending'&&<><button className={buttonClasses('dark','mt-3 w-full')} disabled={busy} onClick={async()=>{setBusy(true);try{const d=await api(`/orders/${id}/retry-payment`,{method:'POST'});await launchPayment(d,user,router,notify);}catch(e){notify(e.message);}finally{setBusy(false);}}}>Retry payment</button><button className={buttonClasses('outline','mt-3 w-full')} disabled={busy} onClick={()=>action(`/orders/${id}/cancel`)}>Cancel unpaid order</button></>}<button className="py-2.5 text-[11px] underline underline-offset-4" onClick={reload}>Refresh order status</button></Summary><OrderExchange order={o} onChange={reload}/></div></main>;}
+/*
+  Payment status as a pill.
+
+  Its own small map rather than the shared badgeClasses(): that helper is tuned
+  to the catalogue's warm palette and is used by the order *history* rows, and
+  this page needs the cooler tracking palette around it. Both read the same
+  `payment_status` field, so the two cannot disagree about the facts, only
+  about the colour.
+*/
+const PAYMENT_TONES={
+  paid:'bg-track-green-soft text-track-green',
+  refunded:'bg-[#f3f4f6] text-track-muted',
+  refunding:'bg-[#fef3c7] text-[#b45309]',
+  pending:'bg-[#fef3c7] text-[#b45309]',
+};
+
+/** A titled white card. The page's one surface, so the radius and border cannot drift between sections. */
+function OrderCard({title,icon,action,children,className='',bodyClassName='px-5 py-5 md:px-6'}){
+  return <section className={`overflow-hidden rounded-[14px] border border-track-border bg-white shadow-[0_1px_3px_rgba(17,24,39,0.06)] ${className}`}>
+    {title&&<header className="flex flex-wrap items-center justify-between gap-3 border-b border-track-border bg-track-surface px-5 py-4 md:px-6">
+      <h2 className="m-0 flex min-w-0 items-center gap-2.5 text-[15px] font-semibold tracking-[-0.01em] text-track-ink md:text-base">
+        {icon&&<Icon name={icon} size={18} strokeWidth={1.9} className="shrink-0 text-track-green"/>}
+        {title}
+      </h2>
+      {action}
+    </header>}
+    <div className={bodyClassName}>{children}</div>
+  </section>;
+}
+
+/**
+ * The order details page.
+ *
+ * Laid out as a receipt: what was ordered and where it is going down the main
+ * column, what it cost and what can be done about it in a panel beside it.
+ *
+ * Every value on screen is read from GET /orders/:id and GET /orders/:id/
+ * tracking. Nothing is computed from an assumption -- the progress tracker is
+ * given the order's own status, the item rows are the snapshots taken at
+ * checkout, and the totals are the ones that were charged.
+ *
+ * Two polls run here. A pending or refunding payment is re-read every ten
+ * seconds, because Razorpay confirms out of band and the customer is sitting
+ * on this page waiting for it. The parcel is polled separately inside
+ * ShipmentTracking on a much slower timer; they are deliberately not merged,
+ * since the payment question is settled within a minute and the delivery one
+ * takes days.
+ */
+function OrderView({id}){
+  const {data:o,loading,error,reload,refreshing}=useResource(`/orders/${id}`),{user,notify}=useStore(),router=useRouter(),[busy,setBusy]=useState(false);
+  useEffect(()=>{if(o&&['pending','refunding'].includes(o.payment_status)){const t=setInterval(reload,10000);return()=>clearInterval(t);}},[o?.payment_status]);
+  if(loading&&!o)return <Loading/>;
+  if(error)return <ErrorState message={error} onRetry={reload}/>;
+  if(!o)return null;
+
+  async function action(path,body){setBusy(true);try{await api(path,{method:'POST',body});reload();}catch(e){notify(e.message);}finally{setBusy(false);}}
+
+  // Units, not rows: two of one shirt is two items in the bag, and the summary
+  // headline and the card title have to agree with each other.
+  const units=o.items.reduce((total,item)=>total+item.quantity,0);
+  const placed=new Date(o.created_at);
+  const notice='rounded-[12px] border border-[#fde68a] bg-[#fffbeb] px-4 py-3.5 text-[13px] leading-relaxed text-[#92400e] md:px-5';
+
+  return <main className="mx-auto min-h-[500px] w-[calc(100%-24px)] max-w-shell pt-6 pb-11 md:w-[calc(100%-32px)] md:pt-8 md:pb-14 lg:w-[calc(100%-64px)] lg:pt-10 lg:pb-20">
+    {/* Breadcrumb. "Orders" points at /account, which opens on the orders tab
+        by default -- there is no separate orders route to link to. */}
+    <nav aria-label="Breadcrumb" className="mb-5 md:mb-6">
+      <ol className="m-0 flex list-none flex-wrap items-center gap-2 p-0 text-[11px] text-track-muted md:text-xs">
+        <li className="flex items-center gap-2"><Link className="flex items-center gap-1.5 hover:text-track-ink" href="/"><Icon name="home" size={14} strokeWidth={1.9}/><span className="sr-only sm:not-sr-only">Home</span></Link><Icon name="arrow" size={12} strokeWidth={1.9} className="text-[#d1d5db]"/></li>
+        <li className="flex items-center gap-2"><Link className="hover:text-track-ink" href="/account">My Account</Link><Icon name="arrow" size={12} strokeWidth={1.9} className="text-[#d1d5db]"/></li>
+        <li className="flex items-center gap-2"><Link className="hover:text-track-ink" href="/account">Orders</Link><Icon name="arrow" size={12} strokeWidth={1.9} className="text-[#d1d5db]"/></li>
+        <li aria-current="page" className="font-medium text-track-ink">Order #{o.number}</li>
+      </ol>
+    </nav>
+
+    <div className="mb-7 flex flex-col items-start justify-between gap-4 md:mb-8 md:flex-row md:items-start md:gap-6">
+      <div className="min-w-0">
+        <p className="m-0 text-[10px] font-bold tracking-[0.14em] text-track-green uppercase md:text-[11px]">
+          {o.payment_status==='paid'?'Thank you for your order':'Order details'}
+        </p>
+        <h1 className="mt-2 mb-0 text-[28px] leading-none font-bold tracking-[-0.02em] text-track-ink md:text-[34px]">Order #{o.number}</h1>
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] text-track-muted md:text-[13px]">
+          <span className="flex items-center gap-2">
+            <Icon name="calendar" size={15} strokeWidth={1.8} className="shrink-0"/>
+            Placed on {placed.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})} at {placed.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})}
+          </span>
+          <span aria-hidden="true" className="hidden h-3.5 w-px bg-track-border sm:block"/>
+          <span className="flex items-center gap-2">
+            <Icon name="box" size={15} strokeWidth={1.8} className="shrink-0"/>
+            {units} {units===1?'item':'items'}
+          </span>
+        </div>
+      </div>
+      <span className={`inline-flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-[12px] font-semibold capitalize ${PAYMENT_TONES[o.payment_status]??'bg-[#f3f4f6] text-track-muted'}`}>
+        <Icon name="shield" size={15} strokeWidth={2}/>{o.payment_status}
+      </span>
+    </div>
+
+    {o.status==='review'&&<p className={`${notice} mb-6`}>Your payment arrived after the reservation ended. The order is under review and a refund has been queued. It will not be shipped.</p>}
+    {o.payment_status==='pending'&&<p className={`${notice} mb-6`}>Payment has not been confirmed. Only captured payments verified by the server complete an order.</p>}
+
+    <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1.85fr)_minmax(320px,1fr)] lg:gap-7">
+      <div className="min-w-0">
+        <OrderProgress status={o.status}/>
+
+        <OrderCard title={`Ordered items (${units})`} icon="bag" className="mb-6" bodyClassName="">
+          <ul className="m-0 list-none p-0">
+            {o.items.map(i=><li key={i.id} className="flex flex-wrap items-start gap-4 border-b border-track-border px-5 py-4 last:border-b-0 md:flex-nowrap md:gap-5 md:px-6 md:py-5">
+              {/* A fixed, padded tile with object-contain. The catalogue
+                  photography is square but the cut-outs inside it are not, so
+                  cropping to fill would slice sleeves and hems off. */}
+              <span className="grid size-[72px] shrink-0 place-items-center overflow-hidden rounded-[10px] bg-track-image md:size-[84px]">
+                {i.image
+                  ?<img src={i.image} alt={i.name} className="size-full object-contain p-1.5" loading="lazy"/>
+                  :<Icon name="bag" size={24} strokeWidth={1.6} className="text-[#9ca3af]"/>}
+              </span>
+              <div className="min-w-0 flex-1">
+                <h3 className="m-0 text-[14px] leading-snug font-semibold text-track-ink md:text-[15px]">{i.name}</h3>
+                <p className="m-0 mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-track-muted md:text-[13px]">
+                  {[i.size,i.color].filter(Boolean).map((value,index,list)=><React.Fragment key={index}>
+                    <span>{value}</span>
+                    {index<list.length-1&&<span aria-hidden="true" className="text-track-border">|</span>}
+                  </React.Fragment>)}
+                </p>
+                <p className="m-0 mt-1 text-[12px] text-track-muted md:text-[13px]">Qty: {i.quantity}</p>
+              </div>
+              <div className="shrink-0 text-right">
+                <strong className="block text-[14px] font-bold text-track-ink tabular-nums md:text-[15px]">{money(i.quantity*i.unit_price,o.currency)}</strong>
+                {/* The unit price is only worth a second line when it differs
+                    from the line total. */}
+                {i.quantity>1&&<small className="mt-1 block text-[11px] text-track-muted tabular-nums">{money(i.unit_price,o.currency)} each</small>}
+              </div>
+            </li>)}
+          </ul>
+        </OrderCard>
+
+        <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2">
+          {/* No Edit action here. There is no endpoint that changes the
+              delivery address on a placed order -- the address is a snapshot
+              taken at checkout and is what the invoice and the Shiprocket
+              booking were both built from -- so an Edit button would either do
+              nothing or quietly disagree with the parcel already in transit. */}
+          <OrderCard title="Delivery address" icon="pin">
+            <address className="m-0 text-[13px] leading-relaxed text-track-muted not-italic">
+              <strong className="mb-1 block font-semibold text-track-ink">{o.address.name}</strong>
+              {o.address.line1}<br/>
+              {o.address.line2&&<>{o.address.line2}<br/></>}
+              {o.address.city}, {o.address.state} {o.address.postalCode}
+              {o.address.phone&&<><br/><span className="mt-1.5 inline-block text-track-ink">{o.address.phone}</span></>}
+            </address>
+          </OrderCard>
+
+          <ShipmentTracking id={id} placedAt={o.created_at}/>
+        </div>
+
+        {o.refund&&<OrderCard title="Refund" icon="refresh" className="mt-6">
+          <p className="m-0 text-[13px] text-track-muted">
+            <span className="font-semibold text-track-ink capitalize">{o.refund.status}</span> · {money(o.refund.amount,o.currency)}
+          </p>
+          {o.refund.reason&&<p className="m-0 mt-1.5 text-[13px] text-track-muted">{o.refund.reason}</p>}
+        </OrderCard>}
+
+        <OrderExchange order={o} onChange={reload}/>
+      </div>
+
+      <OrderSummaryCard order={o} units={units} onRefresh={reload} refreshing={refreshing}>
+        {/* Retry and cancel belong above the invoice: an unpaid order has no
+            invoice, and these are the only two things that can move it on. */}
+        {o.status==='pending'&&<>
+          <button type="button" className={buttonClasses('dark','w-full')} disabled={busy} onClick={async()=>{setBusy(true);try{const d=await api(`/orders/${id}/retry-payment`,{method:'POST'});await launchPayment(d,user,router,notify);}catch(e){notify(e.message);}finally{setBusy(false);}}}>Retry payment</button>
+          <button type="button" className={buttonClasses('outline','w-full !border-track-border !text-track-ink hover:!bg-track-surface')} disabled={busy} onClick={()=>action(`/orders/${id}/cancel`)}>Cancel unpaid order</button>
+        </>}
+      </OrderSummaryCard>
+    </div>
+  </main>;
+}
 
 
 /**
@@ -315,7 +492,7 @@ function OrderView({id}){const {data:o,loading,error,reload}=useResource(`/order
  * customer doing anything. Polling stops once it is delivered, returned or
  * cancelled -- there is nothing further to see.
  */
-function ShipmentTracking({id}){
+function ShipmentTracking({id,placedAt}){
   const {data,loading,error,reload}=useResource(`/orders/${id}/tracking`);
   const settled=['delivered','rto_delivered','cancelled'].includes(data?.stage);
   useEffect(()=>{
@@ -324,48 +501,71 @@ function ShipmentTracking({id}){
     return()=>clearInterval(timer);
   },[data?.stage,settled]);
 
-  const card='mb-5 rounded-lg border border-rule bg-white p-[22px] md:mb-6 md:p-7 [&_h2]:text-[21px] md:[&_h2]:text-[22px] [&_p]:text-xs';
-  if(loading&&!data)return <section className={card}><h3>Shipping &amp; tracking</h3><p>Loading…</p></section>;
-  if(error)return <section className={card}><h3>Shipping &amp; tracking</h3><p>{error}</p></section>;
+  const title='Shipping & tracking';
+  if(loading&&!data)return <OrderCard title={title} icon="truck"><p className="m-0 text-[13px] text-track-muted">Loading…</p></OrderCard>;
+  if(error)return <OrderCard title={title} icon="truck"><p className="m-0 text-[13px] text-track-muted">{error}</p></OrderCard>;
   if(!data)return null;
 
-  // No shipment, or no AWB yet. The server supplies the wording.
+  // No shipment, or booked but no AWB yet. The server supplies the wording;
+  // the milestones are still drawn, all but the first one upcoming, so the
+  // empty state shows what is coming rather than only what is missing.
   if(!data.available){
-    return <section className={card}>
-      <h3>Shipping &amp; tracking</h3>
-      <p>{data.message}</p>
-      {data.stage_label&&<p className="text-ink-soft">{data.stage_label}</p>}
-    </section>;
+    return <OrderCard title={title} icon="truck">
+      <p className="m-0 mb-5 text-[12px] leading-relaxed text-track-muted md:text-[13px]">{data.message}</p>
+      {/* `rank` is absent entirely when there is no shipment and present when
+          the parcel is booked but has no AWB, so this covers both: nothing is
+          claimed beyond "placed" in the first case, and a real booking is not
+          understated in the second. */}
+      <ShipmentSteps rank={data.rank??0} history={data.history??[]} placedAt={placedAt}/>
+    </OrderCard>;
   }
 
-  return <section className={card}>
-    <h3>Shipping &amp; tracking</h3>
-    <p className="font-semibold text-ink">{data.stage_label}</p>
-    <p>
-      {data.courier||'Courier'}<br/>
-      AWB: {data.awb}
-      {data.provider_status&&data.provider_status!==data.stage_label&&<><br/><span className="text-ink-soft">{data.provider_status}</span></>}
-    </p>
-    {data.estimated_delivery&&data.stage!=='delivered'&&
-      <p>Estimated delivery: {new Date(data.estimated_delivery).toLocaleDateString()}</p>}
-    {data.delivered_at&&
-      <p>Delivered {new Date(data.delivered_at).toLocaleString()}</p>}
-    {data.tracking_url&&
-      <a className="mt-6 inline-block border-b border-[#aaa] pb-[5px] text-xs" href={data.tracking_url} target="_blank" rel="noreferrer">Track shipment</a>}
-    {data.history.length>0&&<div className="mt-7 border-t border-rule pt-6">
-      <h4 className="m-0 mb-3 text-xs font-semibold tracking-[0.08em] text-ink-soft uppercase">Tracking history</h4>
-      <ol className="m-0 list-none space-y-3 p-0">
+  return <OrderCard title={title} icon="truck">
+    <div className="mb-5 flex flex-wrap items-center gap-2">
+      <span className="inline-flex items-center gap-2 rounded-full bg-track-green-soft px-3 py-1.5 text-[12px] font-semibold text-track-green">
+        <Icon name="truck" size={14} strokeWidth={2}/>{data.stage_label}
+      </span>
+      {data.provider_status&&data.provider_status!==data.stage_label&&
+        <span className="text-[11px] text-track-muted">{data.provider_status}</span>}
+    </div>
+
+    <dl className="m-0 mb-5 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-[12px] md:text-[13px]">
+      {data.courier&&<><dt className="m-0 text-track-muted">Courier</dt><dd className="m-0 font-medium text-track-ink">{data.courier}</dd></>}
+      <dt className="m-0 text-track-muted">Tracking no.</dt>
+      <dd className="m-0 font-medium text-track-ink tabular-nums">{data.awb}</dd>
+      {data.estimated_delivery&&data.stage!=='delivered'&&<>
+        <dt className="m-0 text-track-muted">Expected</dt>
+        <dd className="m-0 font-medium text-track-ink">{new Date(data.estimated_delivery).toLocaleDateString(undefined,{month:'short',day:'numeric'})}</dd>
+      </>}
+      {data.delivered_at&&<>
+        <dt className="m-0 text-track-muted">Delivered</dt>
+        <dd className="m-0 font-medium text-track-ink">{new Date(data.delivered_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</dd>
+      </>}
+    </dl>
+
+    <ShipmentSteps rank={data.rank??0} history={data.history} placedAt={placedAt}/>
+
+    {data.tracking_url&&<a className="mt-5 inline-flex items-center gap-2 text-[12px] font-semibold text-track-green hover:underline hover:underline-offset-4" href={data.tracking_url} target="_blank" rel="noreferrer">
+      Track on courier site<Icon name="arrow" size={14} strokeWidth={2.2}/>
+    </a>}
+
+    {/* The base stylesheet gives every <details> a bottom rule and 17px of
+        vertical padding, which belongs to the FAQ accordions it was written
+        for. Both are cancelled so this one sits flush inside the card. */}
+    {data.history.length>0&&<details className="mt-5 !border-t !border-b-0 !border-track-border !py-0 text-[12px]">
+      <summary className="cursor-pointer pt-4 font-semibold text-track-ink">Tracking history ({data.history.length})</summary>
+      <ol className="m-0 mt-3 list-none space-y-3 p-0">
         {data.history.map((entry,index)=>
-          <li key={`${entry.at}-${index}`} className="flex gap-3 text-xs">
-            <span className="mt-[6px] size-1.5 shrink-0 rounded-full bg-[#ccc]" aria-hidden/>
+          <li key={`${entry.at}-${index}`} className="flex gap-3">
+            <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-[#d1d5db]" aria-hidden="true"/>
             <span className="min-w-0">
-              <span className="block text-ink">{entry.status||entry.label}</span>
-              <span className="mt-0.5 block text-ink-soft">
+              <span className="block text-track-ink">{entry.status||entry.label}</span>
+              <span className="mt-0.5 block text-track-muted">
                 {[entry.location,entry.at?new Date(entry.at).toLocaleString():null].filter(Boolean).join(' · ')}
               </span>
             </span>
           </li>)}
       </ol>
-    </div>}
-  </section>;
+    </details>}
+  </OrderCard>;
 }

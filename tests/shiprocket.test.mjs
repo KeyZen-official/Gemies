@@ -383,6 +383,79 @@ test('missing parcel dimensions are an operator error, not an estimate', () => {
   assert.deepEqual(sr.packageSpec(), {weight: 0.4, length: 25, breadth: 20, height: 4});
 });
 
+/*
+  Readiness is reported honestly, and the optional variables stay optional.
+
+  The gap this covers was real: `config.shippingEnabled` is satisfied by an
+  email, a password and a pickup nickname, and the admin dashboard reported
+  that as "Shipping: Configured". An install with no parcel measurements
+  therefore showed a green tile and an enabled "Create shipment" button, and
+  the operator only discovered the problem as a 503 after clicking it.
+*/
+test('shipping readiness names every blocking variable and no optional one', async () => {
+  assert.deepEqual(sr.shippingConfigGaps(), {ready: true, missing: []},
+    'the fixture is fully configured');
+
+  // Each blocking variable is named when it alone is absent.
+  for (const name of ['SHIPROCKET_EMAIL', 'SHIPROCKET_PASSWORD', 'SHIPROCKET_PICKUP_LOCATION',
+    'SHIPROCKET_PICKUP_PINCODE', 'PACKAGE_WEIGHT_KG', 'PACKAGE_LENGTH_CM',
+    'PACKAGE_BREADTH_CM', 'PACKAGE_HEIGHT_CM']) {
+    const saved = process.env[name];
+    delete process.env[name];
+    try {
+      const gaps = sr.shippingConfigGaps();
+      assert.equal(gaps.ready, false, `${name} must block a booking`);
+      assert.deepEqual(gaps.missing, [name], `${name} is named on its own`);
+    } finally { process.env[name] = saved; }
+  }
+
+  // A pickup PIN that is present but not a valid Indian PIN is still a gap:
+  // the serviceability and rate queries would fail on it.
+  const savedPin = process.env.SHIPROCKET_PICKUP_PINCODE;
+  process.env.SHIPROCKET_PICKUP_PINCODE = '12';
+  try {
+    assert.deepEqual(sr.shippingConfigGaps().missing, ['SHIPROCKET_PICKUP_PINCODE']);
+  } finally { process.env.SHIPROCKET_PICKUP_PINCODE = savedPin; }
+
+  // A measurement of zero is not a measurement.
+  const savedWeight = process.env.PACKAGE_WEIGHT_KG;
+  process.env.PACKAGE_WEIGHT_KG = '0';
+  try {
+    assert.deepEqual(sr.shippingConfigGaps().missing, ['PACKAGE_WEIGHT_KG']);
+  } finally { process.env.PACKAGE_WEIGHT_KG = savedWeight; }
+
+  // The three genuinely optional ones never block, because blank is a working
+  // configuration for each: Shiprocket picks the courier and the channel, and
+  // tracking converges through the polled job without a webhook secret.
+  for (const name of ['SHIPROCKET_COURIER_ID', 'SHIPROCKET_CHANNEL_ID', 'SHIPROCKET_WEBHOOK_SECRET']) {
+    const saved = process.env[name];
+    delete process.env[name];
+    try {
+      assert.deepEqual(sr.shippingConfigGaps(), {ready: true, missing: []},
+        `${name} is optional and must not block a booking`);
+    } finally { if (saved !== undefined) process.env[name] = saved; }
+  }
+});
+
+test('the admin panel disables booking and names the gap when the parcel is unmeasured', async () => {
+  const order = await paidOrder();
+  const saved = process.env.PACKAGE_LENGTH_CM;
+  delete process.env.PACKAGE_LENGTH_CM;
+  try {
+    const panel = await ok(`/admin/orders/${order.orderId}/shipment`);
+    assert.equal(panel.shippingConfigured, false);
+    assert.deepEqual(panel.shippingMissing, ['PACKAGE_LENGTH_CM']);
+    assert.equal(panel.can.create, false, 'the button the operator would click is disabled');
+    assert.equal(panel.can.couriers, false, 'and so is the rate lookup that needs a weight');
+  } finally { process.env.PACKAGE_LENGTH_CM = saved; }
+
+  // Restored, the same order is bookable again.
+  const ready = await ok(`/admin/orders/${order.orderId}/shipment`);
+  assert.equal(ready.shippingConfigured, true);
+  assert.deepEqual(ready.shippingMissing, []);
+  assert.equal(ready.can.create, true);
+});
+
 test('an invalid Indian PIN code is refused before the provider is called', async () => {
   const order = await paidOrder({address: {...ADDRESS, postalCode: '12'}});
   const before = calls.length;

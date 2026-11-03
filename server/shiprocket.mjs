@@ -129,19 +129,28 @@ export const rankOf = (stage) => STAGES[stage]?.rank ?? 0;
  * a courier that refuses the parcel at pickup. A missing value is an operator
  * error with a message that names the variable to set.
  */
+/** The four parcel measurements, as [variable, spec key]. */
+const PACKAGE_VARS = [
+  ['PACKAGE_WEIGHT_KG', 'weight'],
+  ['PACKAGE_LENGTH_CM', 'length'],
+  ['PACKAGE_BREADTH_CM', 'breadth'],
+  ['PACKAGE_HEIGHT_CM', 'height'],
+];
+
+/** A configured measurement, or null when unset, non-numeric or not positive. */
+const positiveNumber = (name) => {
+  const value = Number(process.env[name]);
+  return Number.isFinite(value) && value > 0 ? value : null;
+};
+
 export function packageSpec() {
-  const spec = {
-    weight: Number(process.env.PACKAGE_WEIGHT_KG),
-    length: Number(process.env.PACKAGE_LENGTH_CM),
-    breadth: Number(process.env.PACKAGE_BREADTH_CM),
-    height: Number(process.env.PACKAGE_HEIGHT_CM),
-  };
-  const missing = Object.entries(spec)
-    .filter(([, value]) => !Number.isFinite(value) || value <= 0)
-    .map(([key]) => ({
-      weight: 'PACKAGE_WEIGHT_KG', length: 'PACKAGE_LENGTH_CM',
-      breadth: 'PACKAGE_BREADTH_CM', height: 'PACKAGE_HEIGHT_CM',
-    }[key]));
+  const spec = {};
+  const missing = [];
+  for (const [name, key] of PACKAGE_VARS) {
+    const value = positiveNumber(name);
+    if (value === null) missing.push(name);
+    else spec[key] = value;
+  }
   assert(missing.length === 0, 503,
     `Packed parcel dimensions are not configured: set ${missing.join(', ')} to the real packed values. Shiprocket prices on volumetric weight, so these are not estimated.`);
   return spec;
@@ -149,6 +158,39 @@ export function packageSpec() {
 
 /** An Indian PIN code, which is what Shiprocket's domestic API accepts. */
 export const validPincode = (value) => /^[1-9]\d{5}$/.test(String(value ?? '').trim());
+
+/**
+ * Every variable that must be set before a parcel can actually be booked, and
+ * which of them are not.
+ *
+ * This exists because `config.shippingEnabled` answers a narrower question --
+ * are there credentials and a pickup nickname -- and the admin panel was
+ * reporting that as "Shipping: Configured". It is possible to satisfy it and
+ * still have every booking fail 503 on the parcel measurements, which is
+ * exactly the state this shop was in: an operator saw a green tile and a live
+ * "Create shipment" button, clicked it, and got an error that the panel had
+ * given no warning of.
+ *
+ * The package half reads the same PACKAGE_VARS list that packageSpec() enforces,
+ * so the panel cannot disagree with the guard it is predicting.
+ *
+ * SHIPROCKET_COURIER_ID, SHIPROCKET_CHANNEL_ID and SHIPROCKET_WEBHOOK_SECRET
+ * are deliberately absent: blank courier means Shiprocket chooses per
+ * shipment, blank channel means their default, and a blank webhook secret
+ * means tracking converges through the polled reconciliation job instead. All
+ * three are working configurations, so none of them belongs in a list of
+ * things that block a booking.
+ */
+export function shippingConfigGaps() {
+  const missing = [];
+  for (const name of ['SHIPROCKET_EMAIL', 'SHIPROCKET_PASSWORD', 'SHIPROCKET_PICKUP_LOCATION']) {
+    if (!String(process.env[name] ?? '').trim()) missing.push(name);
+  }
+  // Needed for courier rates and serviceability, not just for the booking.
+  if (!validPincode(process.env.SHIPROCKET_PICKUP_PINCODE)) missing.push('SHIPROCKET_PICKUP_PINCODE');
+  for (const [name] of PACKAGE_VARS) if (positiveNumber(name) === null) missing.push(name);
+  return {ready: missing.length === 0, missing};
+}
 
 /* ---------------------------------------------------------- serviceability */
 

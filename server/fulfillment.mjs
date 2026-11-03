@@ -589,6 +589,12 @@ export async function trackingForCustomer(orderId) {
     message: s.awb ? null : 'Your order is booked with the courier. A tracking number will appear here shortly.',
     stage: s.stage,
     stage_label: sr.STAGES[s.stage]?.label ?? 'Shipment created',
+    // The stage's position in sr.STAGES, so the order page can decide how far
+    // along the parcel is without shipping a second copy of the stage
+    // vocabulary to the browser. Comparing ranks is the same test the tracking
+    // reconciliation uses above; duplicating the keys client-side would mean a
+    // new provider status had to be added in two places to be understood.
+    rank: sr.STAGES[s.stage]?.rank ?? 0,
     provider_status: s.provider_status,
     awb: s.awb,
     courier: s.courier,
@@ -599,6 +605,7 @@ export async function trackingForCustomer(orderId) {
     history: events.map((event) => ({
       stage: event.stage,
       label: sr.STAGES[event.stage]?.label ?? event.stage,
+      rank: sr.STAGES[event.stage]?.rank ?? 0,
       status: event.status,
       location: event.details?.location ?? null,
       detail: event.details?.detail ?? null,

@@ -124,6 +124,38 @@
   /* Inter, loaded by next/font in src/app/layout.jsx. Only the admin opts in
      with `font-inter`; the storefront keeps Manrope and Arial. */
   --font-inter: var(--font-inter-src), ui-sans-serif, system-ui, sans-serif;
+
+  /* ---------------------------------------------------------------------
+     Order tracking palette, for the customer's order details page.
+
+     Its own tokens rather than reaching for the `admin-` set, even though
+     --color-track-ink and --color-track-muted happen to be the same two
+     greys: those are fenced off for the back office by the note above, and
+     a storefront page borrowing them is exactly the leak that naming
+     convention exists to prevent.
+
+     Equally not --color-ink / --color-ink-soft. Those are #111111 and
+     #777777 -- a true neutral black and grey, which is right for the
+     catalogue's editorial look. This page is a receipt: it wants the
+     slightly cool, softer greys that read as a system surface rather than
+     as photography captions, and it needs a green that carries delivery
+     progress. Changing --color-ink to suit it would restyle every page on
+     the site.
+
+     The three greens are one ramp: `deep` for filled surfaces that carry
+     white text (the summary header, the primary button), `green` for marks
+     and accents on white, `soft` for the pale success fills. --color-track-
+     green is #087a35, which measures 4.69:1 on white, so it is safe for the
+     13px labels that use it.
+     --------------------------------------------------------------------- */
+  --color-track-ink: #111827;
+  --color-track-muted: #6b7280;
+  --color-track-border: #e5e7eb;
+  --color-track-surface: #f9fafb;
+  --color-track-image: #f3f4f6;
+  --color-track-green: #087a35;
+  --color-track-green-deep: #0a5c2a;
+  --color-track-green-soft: #e7f5ec;
 }
 
 /* The rail's caption cross-fade. The component shipped with `animate-in

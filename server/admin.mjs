@@ -19,7 +19,7 @@ import {
   createShipment,assignCourier,schedulePickup,shippingLabel,shippingManifest,
   cancelShipment,courierOptionsForOrder,shipmentFor,
 } from './fulfillment.mjs';
-import {STAGES} from './shiprocket.mjs';
+import {STAGES,shippingConfigGaps} from './shiprocket.mjs';
 import {attemptsForOrder} from './payments.mjs';
 import {walletSummary,history,reconcile,adminAdjust,walletSettings,postStandalone,expireCoinsSweep,TRANSACTION_KINDS} from './wallet.mjs';
 import {exchangeDetails,transition,computeCredit,TRANSITIONS} from './exchanges.mjs';
@@ -199,13 +199,15 @@ adminRoutes.get('/dashboard', async (req, res) => {
     // Kept as the original boolean map so nothing reading the old shape breaks.
     integrations: {
       payments: !!process.env.RAZORPAY_KEY_ID,
-      shipping: !!process.env.SHIPROCKET_EMAIL,
+      // Was `!!SHIPROCKET_EMAIL`, which reported Configured on an install
+      // where every booking would fail on the missing parcel measurements.
+      shipping: shippingConfigGaps().ready,
       email: !!process.env.RESEND_API_KEY,
       invoices: !!(process.env.BUSINESS_NAME && process.env.BUSINESS_ADDRESS && process.env.BUSINESS_EMAIL),
     },
     integrationHealth: [
       integration('payments', !!process.env.RAZORPAY_KEY_ID, (failedByKind.payment_sync ?? 0) + (failedByKind.refund ?? 0) + (failedByKind.refund_sync ?? 0)),
-      integration('shipping', !!process.env.SHIPROCKET_EMAIL, (failedByKind.shipment ?? 0) + (failedByKind.tracking ?? 0)),
+      integration('shipping', shippingConfigGaps().ready, (failedByKind.shipment ?? 0) + (failedByKind.tracking ?? 0)),
       integration('email', !!process.env.RESEND_API_KEY, (failedByKind.email ?? 0) + emailFailures),
       integration('invoices', !!(process.env.BUSINESS_NAME && process.env.BUSINESS_ADDRESS && process.env.BUSINESS_EMAIL), failedByKind.invoice ?? 0),
     ],
@@ -853,6 +855,11 @@ adminRoutes.get('/orders/:id/shipment', async (req, res) => {
       .sort({created_at: -1}).limit(50).toArray()
     : [];
 
+  // Eligibility is about the order; readiness is about this installation's
+  // configuration. Both gate the provider calls below, because an order that
+  // is perfectly shippable still cannot be booked without the parcel spec.
+  const shippingGaps = shippingConfigGaps();
+  const shippingReady = shippingGaps.ready;
   const eligible = order.payment_status === 'paid' && ['confirmed', 'processing'].includes(order.status);
   const stageRank = shipment ? (STAGES[shipment.stage]?.rank ?? 0) : 0;
   const cancelled = shipment?.status === 'cancelled';
@@ -872,8 +879,11 @@ adminRoutes.get('/orders/:id/shipment', async (req, res) => {
     // Computed here, not in the browser: the client renders buttons from this
     // and the server refuses anything else anyway.
     can: {
-      create: eligible && !shipment?.provider_order_id && !cancelled,
-      couriers: eligible && !cancelled,
+      // The two that call Shiprocket with the parcel spec are gated on
+      // readiness, so a button the configuration cannot support is disabled
+      // with the reason shown beside it instead of returning a 503 on click.
+      create: shippingReady && eligible && !shipment?.provider_order_id && !cancelled,
+      couriers: shippingReady && eligible && !cancelled,
       assign: Boolean(shipment?.provider_shipment_id) && !shipment?.awb && !cancelled,
       pickup: Boolean(shipment?.awb) && !cancelled && stageRank < STAGES.picked_up.rank,
       label: Boolean(shipment?.awb),
@@ -882,7 +892,10 @@ adminRoutes.get('/orders/:id/shipment', async (req, res) => {
       cancel: Boolean(shipment) && !cancelled && stageRank < STAGES.picked_up.rank,
       reconcile: Boolean(shipment) && ['reconciliation_required', 'assignment_review', 'creating', 'assigning'].includes(shipment.status),
     },
-    shippingConfigured: config.shippingEnabled,
+    shippingConfigured: shippingReady,
+    // Named so the panel can tell the operator which variables to set rather
+    // than restating the generic "Shiprocket is not configured".
+    shippingMissing: shippingGaps.missing,
     webhookConfigured: Boolean(config.shiprocketWebhookSecret),
   });
 });
