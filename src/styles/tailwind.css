@@ -1,0 +1,277 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Design tokens, carried over from the hand-written stylesheet so the migrated
+   components render in exactly the same colours and sizes as before.
+   Tailwind v4 reads the theme from CSS, so there is no tailwind.config.js.
+   --------------------------------------------------------------------------- */
+@theme {
+  --font-sans: Arial, Helvetica, sans-serif;
+
+  /* Manrope, loaded by next/font in src/app/layout.jsx, which sets
+     --font-manrope-src on <html>. Exposed here so Tailwind generates a
+     `font-manrope` utility for the components that opt in (the homepage
+     promotional cards). --font-sans above is untouched, so nothing else on
+     the site changes font. */
+  --font-manrope: var(--font-manrope-src), Arial, Helvetica, sans-serif;
+
+  /* Promotional card palette. Named tokens rather than repeated hex literals,
+     so the three cards cannot drift apart and the terracotta is defined once. */
+  --color-card-tshirt: #f2eee6;
+  --color-card-shirt: #d8d2c9;
+  --color-card-bottoms: #c98979;
+  --color-card-ink: #171615;
+
+  /* Authentication screens. Separate tokens rather than reuse of the input
+     and text colours in @layer base, because those base rules style every
+     form in the app (checkout, addresses, admin) and the auth inputs are a
+     different size and colour. --color-auth-ink repeats the value of
+     --color-card-ink above; they are the same ink but belong to different
+     surfaces, so neither should move when the other does. */
+  --color-auth-panel: #f1eee8;
+  --color-auth-ink: #171615;
+  --color-auth-muted: #77716b;
+  --color-auth-border: #dedad3;
+  --color-auth-placeholder: #a09b94;
+  --color-auth-error: #a83329;
+
+  --color-ink: #111111;
+  --color-ink-soft: #777777;
+  --color-body: #151515;
+  --color-panel: #f1f1f1;
+  --color-rule: #e6e6e3;
+  --color-line: #d8d8d3;
+  /* --color-offer-from / --color-offer-to are gone: the bottoms card used
+     them for a two-stop gradient and is now a single flat terracotta,
+     --color-card-bottoms below. */
+
+  /* The content container cap, previously --container-max. Exposed as a
+     Tailwind container size so `max-w-shell` is available as a utility.
+     Every page reads it through `max-w-shell`, and the hero reads it through
+     Container, so this one number sets the page width everywhere and the
+     hero copy stays aligned with the sections under it.
+
+     Raised from 1320px: on a 2560px display 1320px fills barely half the
+     screen, so the catalogue grid, the promotional cards and the section
+     headings all sat in a narrow column with a wide empty margin either side.
+     At 1600px a four-column product card is 385px wide, and the photography
+     is 1400px square, so nothing is upscaled. */
+  --container-shell: 1600px;
+
+  /* Navbar height, used by the hero's negative offset and the sticky gallery. */
+  --spacing-nav: 92px;
+
+  /* ---------------------------------------------------------------------
+     shadcn colour tokens, for src/components/ui/product-rail-gallery.jsx.
+
+     That component is written against shadcn's token names -- bg-background,
+     text-muted-foreground, border-border, focus-visible:ring-ring, and
+     var(--color-foreground) inside a few inline gradients. shadcn itself is
+     NOT installed here and does not need to be: the component uses no shadcn
+     component, no `cn()` helper and no class-variance-authority. It needs
+     these eight colours to exist, nothing more.
+
+     Running `npx shadcn init` instead would rewrite this file with shadcn's
+     own oklch palette and dark-mode block, which would land on top of the
+     measured, hand-tuned tokens above. So the names are defined here and
+     mapped onto the Gemies palette, which also makes the rail look like it
+     belongs to this store rather than to a starter template.
+     --------------------------------------------------------------------- */
+  --color-background: #ffffff;
+  --color-foreground: #111111;        /* = --color-ink */
+  --color-card: #ffffff;
+  --color-card-foreground: #171615;   /* = --color-card-ink; the hang tag */
+  --color-border: #e6e6e3;            /* = --color-rule */
+  --color-ring: #111111;
+
+  /* Does double duty: the rail's brushed metal, and the eyebrow and caption
+     text under it. Not --color-ink-soft's #777777, which the rest of the site
+     uses -- against the cream the hero sits on that measures 3.87:1, and the
+     eyebrow is 11px and the caption 13px, so both need 4.5:1. (#777777 only
+     reaches 4.48:1 even on pure white.) This is the lightest value with real
+     headroom at 4.70:1, so the rail stays metallic rather than going charcoal. */
+  --color-muted-foreground: #6a6a65;
+
+  /* No --color-muted: the component references muted-foreground but never
+     plain muted, and Tailwind v4 drops theme tokens nothing uses anyway. */
+
+  /* ---------------------------------------------------------------------
+     Admin palette.
+
+     Separate from the storefront tokens above on purpose. The shop is cream,
+     ink and terracotta -- a clothing brand's palette. The admin is a tool: a
+     neutral grey-blue canvas with white cards, one green accent and four
+     status colours. Mixing the two made the admin look like a page of the
+     shop rather than somewhere you work.
+
+     Prefixed `admin-` so there is never a question about which surface a
+     colour belongs to, and so none of these can leak into the storefront by
+     being the shorter name to reach for.
+     --------------------------------------------------------------------- */
+  --color-admin-bg: #f8f9fb;
+  --color-admin-surface: #ffffff;
+  --color-admin-text: #111827;
+  --color-admin-text-2: #6b7280;
+  --color-admin-muted: #9ca3af;
+  --color-admin-border: #e5e7eb;
+  --color-admin-accent: #166534;
+  --color-admin-success: #16a34a;
+  --color-admin-warning: #d97706;
+  --color-admin-danger: #dc2626;
+  --color-admin-blue: #2563eb;
+  --color-admin-purple: #7c3aed;
+
+  /* Inter, loaded by next/font in src/app/layout.jsx. Only the admin opts in
+     with `font-inter`; the storefront keeps Manrope and Arial. */
+  --font-inter: var(--font-inter-src), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* The rail's caption cross-fade. The component shipped with `animate-in
+   fade-in` from tailwindcss-animate, which is not a dependency of this
+   project and is not worth adding for one 300ms opacity transition. */
+@utility animate-rail-fade {
+  animation: rail-fade-in 300ms ease-out;
+}
+
+@keyframes rail-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Breakpoint-matched navbar height. The hero is pulled up by exactly this, so
+   the two cannot drift apart. */
+@layer base {
+  :root {
+    --spacing-nav: 92px;
+
+    /* Aliases for the stylesheets not yet migrated (styles.css and
+       styles/product.css). They point at the @theme tokens above, so there is
+       still a single source of truth for each value. Delete each line as the
+       CSS that uses it is migrated to utilities. */
+    --ink: var(--color-ink);
+    --ink-soft: var(--color-ink-soft);
+    --panel: var(--color-panel);
+    --rule: var(--color-rule);
+    --nav-h: var(--spacing-nav);
+  }
+
+  @media (width <= 1023px) {
+    :root { --spacing-nav: 78px; }
+  }
+
+  @media (width <= 767px) {
+    :root { --spacing-nav: 68px; }
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Base layer: resets and element defaults.
+
+   These target bare elements (html, body, headings, paragraphs, form
+   controls), so they cannot become utility classes on a per-element basis
+   without touching every tag in the app. Tailwind's own guidance is to put
+   this kind of thing in @layer base, and the brief allows CSS for "resets and
+   framework configuration".
+   --------------------------------------------------------------------------- */
+@layer base {
+  html,
+  body {
+    width: 100%;
+    min-height: 100%;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    color: var(--color-body);
+    font-family: var(--font-sans);
+    font-synthesis: none;
+  }
+
+  /* Tailwind's preflight removes default button/anchor styling but not these. */
+  button {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button,
+  a {
+    touch-action: manipulation;
+  }
+
+  :focus-visible {
+    outline: 2px solid #9a6644;
+    outline-offset: 5px;
+  }
+
+  ::selection {
+    background: #dfcfbd;
+  }
+
+  /* Element defaults carried over from the old stylesheet. These target bare
+     tags that appear in hundreds of places, so they stay as base styles
+     rather than becoming per-element utility classes. */
+  h1, h2, h3, h4, p {
+    margin-top: 0;
+  }
+
+  h1, h2, h3 {
+    letter-spacing: -0.035em;
+  }
+
+  h1 { font-size: 42px; line-height: 1.14; font-weight: 600; }
+  h2 { font-size: 30px; line-height: 1.2; font-weight: 600; }
+  h3 { font-size: 18px; font-weight: 600; }
+  h4 { font-size: 13px; }
+  p { line-height: 1.6; color: var(--color-ink-soft); }
+  small { font-size: 11px; }
+
+  hr {
+    border: 0;
+    border-top: 1px solid var(--color-rule);
+    margin: 24px 0;
+  }
+
+  /* Form controls: every input in the app relies on this. */
+  input, select, textarea {
+    width: 100%;
+    min-height: 45px;
+    padding: 13px 14px;
+    border: 1px solid #d8d8d5;
+    border-radius: 5px;
+    background: #fff;
+    color: #222;
+  }
+
+  input::placeholder { color: #92928e; }
+  textarea { resize: vertical; min-height: 120px; }
+
+  details {
+    border-bottom: 1px solid var(--color-rule);
+    padding: 17px 0;
+    font-size: 12px;
+  }
+
+  summary { cursor: pointer; font-weight: 600; }
+  details p { margin-top: 15px; }
+
+  /* Accessibility reset: a blunt global is correct here, since it must beat
+     every animation and transition in the app. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation: none !important;
+      transition: none !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

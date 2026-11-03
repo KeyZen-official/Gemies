@@ -1,0 +1,156 @@
+[
+  {
+    "slug": "plain-black-bella-canvas-3001-01",
+    "name": "Essential Cotton T-Shirt",
+    "colour": "Black",
+    "hex": "#191617",
+    "price": 79900,
+    "category": "t-shirts-regular-fit",
+    "sizing": "tops",
+    "image": "/assets/products/plain-black-bella-canvas-3001-01.webp",
+    "source": "public/products/tshirts/plain/plain-black-bella-canvas-3001-01.png"
+  },
+  {
+    "slug": "plain-white-bella-canvas-3001-01",
+    "name": "Essential Cotton T-Shirt",
+    "colour": "White",
+    "hex": "#ecebf0",
+    "price": 79900,
+    "category": "t-shirts-regular-fit",
+    "sizing": "tops",
+    "image": "/assets/products/plain-white-bella-canvas-3001-01.webp",
+    "source": "public/products/tshirts/plain/plain-white-bella-canvas-3001-01.png"
+  },
+  {
+    "slug": "plain-grey-triblend-bella-canvas-3413-01",
+    "name": "Tri-Blend T-Shirt",
+    "colour": "Grey Marl",
+    "hex": "#847f81",
+    "price": 89900,
+    "category": "t-shirts-regular-fit",
+    "sizing": "tops",
+    "image": "/assets/products/plain-grey-triblend-bella-canvas-3413-01.webp",
+    "source": "public/products/tshirts/plain/plain-grey-triblend-bella-canvas-3413-01.png"
+  },
+  {
+    "slug": "plain-white-01",
+    "name": "Everyday Crew T-Shirt",
+    "colour": "White",
+    "hex": "#e8e7e7",
+    "price": 69900,
+    "category": "t-shirts-regular-fit",
+    "sizing": "tops",
+    "image": "/assets/products/plain-white-01.webp",
+    "source": "public/products/tshirts/plain/plain-white-01.png"
+  },
+  {
+    "slug": "regular-mens-tee-flat-01",
+    "name": "Classic Crew T-Shirt",
+    "colour": "White",
+    "hex": "#eaeaea",
+    "price": 74900,
+    "category": "t-shirts-regular-fit",
+    "sizing": "tops",
+    "image": "/assets/products/regular-mens-tee-flat-01.webp",
+    "source": "public/products/tshirts/regular/regular-mens-tee-flat-01.png"
+  },
+  {
+    "slug": "regular-black-02",
+    "name": "Classic Crew T-Shirt",
+    "colour": "Black",
+    "hex": "#090909",
+    "price": 74900,
+    "category": "t-shirts-regular-fit",
+    "sizing": "tops",
+    "image": "/assets/products/regular-black-02.webp",
+    "source": "public/products/tshirts/regular/regular-black-02.png"
+  },
+  {
+    "slug": "regular-red-03",
+    "name": "Classic Crew T-Shirt",
+    "colour": "Red",
+    "hex": "#eb3838",
+    "price": 74900,
+    "category": "t-shirts-regular-fit",
+    "sizing": "tops",
+    "image": "/assets/products/regular-red-03.webp",
+    "source": "public/products/tshirts/regular/regular-red-03.png"
+  },
+  {
+    "slug": "regular-mens-long-sleeve-tee-01",
+    "name": "Long Sleeve T-Shirt",
+    "colour": "White",
+    "hex": "#c5c5c7",
+    "price": 99900,
+    "category": "t-shirts-full-sleeve",
+    "sizing": "tops",
+    "image": "/assets/products/regular-mens-long-sleeve-tee-01.webp",
+    "source": "public/products/tshirts/regular/regular-mens-long-sleeve-tee-01.png"
+  },
+  {
+    "slug": "polo-flat-front-01",
+    "name": "Piqué Polo Shirt",
+    "colour": "White",
+    "hex": "#d6d4d9",
+    "price": 129900,
+    "category": "t-shirts-polo",
+    "sizing": "tops",
+    "image": "/assets/products/polo-flat-front-01.webp",
+    "source": "public/products/tshirts/polo/polo-flat-front-01.png"
+  },
+  {
+    "slug": "casual-camp-collar-shirt-01",
+    "name": "Camp Collar Shirt",
+    "colour": "White",
+    "hex": "#d7d7d7",
+    "price": 149900,
+    "category": "shirts-casual",
+    "sizing": "tops",
+    "image": "/assets/products/casual-camp-collar-shirt-01.webp",
+    "source": "public/products/shirts/casual/casual-camp-collar-shirt-01.png"
+  },
+  {
+    "slug": "full-sleeve-hooded-raglan-shirt-01",
+    "name": "Hooded Raglan Shirt",
+    "colour": "White",
+    "hex": "#c9c9c9",
+    "price": 159900,
+    "category": "shirts-casual",
+    "sizing": "tops",
+    "image": "/assets/products/full-sleeve-hooded-raglan-shirt-01.webp",
+    "source": "public/products/shirts/full-sleeve/full-sleeve-hooded-raglan-shirt-01.png"
+  },
+  {
+    "slug": "joggers-mens-lounge-pant-01",
+    "name": "Lounge Jogger",
+    "colour": "White",
+    "hex": "#e8e8ea",
+    "price": 139900,
+    "category": "bottom-wear-joggers",
+    "sizing": "waist",
+    "image": "/assets/products/joggers-mens-lounge-pant-01.webp",
+    "source": "public/products/bottoms/joggers/joggers-mens-lounge-pant-01.png"
+  },
+  {
+    "slug": "casual-shorts-training-01",
+    "name": "Training Shorts",
+    "colour": "White",
+    "hex": "#dedede",
+    "price": 109900,
+    "category": "bottom-wear-shorts",
+    "sizing": "tops",
+    "image": "/assets/products/casual-shorts-training-01.webp",
+    "source": "public/products/bottoms/casual-shorts/casual-shorts-training-01.png"
+  },
+  {
+    "slug": "casual-shorts-woven-01",
+    "name": "Woven Shorts",
+    "colour": "Natural",
+    "hex": "#d4c8be",
+    "price": 119900,
+    "category": "bottom-wear-shorts",
+    "sizing": "tops",
+    "image": "/assets/products/casual-shorts-woven-01.webp",
+    "source": "public/products/bottoms/casual-shorts/casual-shorts-woven-01.png"
+  }
+]

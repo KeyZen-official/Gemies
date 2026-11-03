@@ -1,0 +1,30 @@
+{
+  "offerGradient": {
+    "from": "#cf9486",
+    "to": "#cea4bc"
+  },
+  "brandMarks": {
+    "gemies": {
+      "width": 89,
+      "height": 120,
+      "source": "brand-logos/gemies.png",
+      "dark": "/assets/brands/gemies.webp",
+      "light": "/assets/brands/gemies-light.webp",
+      "note": "Store monogram. The dark variant recolours the supplied cream ink to #111111 for light surfaces; the light variant is the artwork as supplied. Alpha preserved in both."
+    }
+  },
+  "assets": [
+    {
+      "name": "hero",
+      "width": 1284,
+      "height": 548,
+      "notes": "Hero photograph. Baked navigation and carousel cropped out; baked headline, copy and CTA inpainted away, leaving the sneakers sharp. HeroBanner renders the real text."
+    },
+    {
+      "name": "footer-banner",
+      "width": 1160,
+      "height": 464,
+      "notes": "Closing banner photograph; baked headline, copy and CTA inpainted away, leaving the photograph sharp. BottomPromoBanner renders the real text."
+    }
+  ]
+}

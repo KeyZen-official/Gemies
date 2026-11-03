@@ -1,0 +1,42 @@
+{
+  "name": "sneakza-commerce",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "dev": "node scripts/stack.mjs dev",
+    "build": "next build",
+    "start": "node scripts/stack.mjs start",
+    "server": "node --env-file-if-exists=.env server/index.mjs",
+    "web": "next dev",
+    "seed": "node --env-file-if-exists=.env scripts/seed.mjs",
+    "taxonomy": "node --env-file-if-exists=.env scripts/taxonomy.mjs",
+    "rail:backfill": "node --env-file-if-exists=.env scripts/rail-backfill.mjs",
+    "admin": "node --env-file-if-exists=.env scripts/admin.mjs",
+    "worker": "node --env-file-if-exists=.env server/worker.mjs",
+    "email:preview": "node --env-file-if-exists=.env scripts/email-preview.mjs",
+    "email:doctor": "node --env-file-if-exists=.env scripts/email-doctor.mjs",
+    "test": "node --test --test-concurrency=1 tests/*.test.mjs"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "lucide-react": "^1.66.0",
+    "mongodb": "^7.8.0",
+    "multer": "^2.0.2",
+    "next": "^16.4.3",
+    "pdfkit": "^0.17.2",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "sharp": "^0.35.5",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "mongodb-memory-server": "^11.3.0",
+    "tailwindcss": "^4.3.3"
+  }
+}
