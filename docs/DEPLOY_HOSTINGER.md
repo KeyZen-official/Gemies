@@ -57,12 +57,36 @@ prints `Entry file:` and `Application type:`, and `Entry file: none` with
 `Application type: Next.js` means the preset is still Next.js no matter what
 the build and output dialog showed.
 
-## Why the build script says `--webpack`
+## Why `npm run build` goes through a script
 
-`npm run build` is `next build --webpack`. Next.js 16 builds with Turbopack by
-default, and Turbopack requires the native SWC binary. Hostinger's build image
-has a glibc older than the one `@next/swc-linux-x64-gnu` is compiled against,
-so that binary fails to load:
+`npm run build` runs `scripts/build.mjs`, which pins `NODE_ENV=production` and
+passes `--webpack`. Both exist because of this host specifically.
+
+### NODE_ENV
+
+`next build` reads `NODE_ENV` from the environment and builds against whatever
+it finds. With `development` you get the production build pipeline wired to
+React's development build, and the build dies prerendering Next's own built-in
+global error page:
+
+```
+Error occurred prerendering page "/_global-error"
+TypeError: Cannot read properties of null (reading 'useContext')
+```
+
+Nothing in that message names `NODE_ENV` or any file in this repository. The
+tell is the run of `Each child in a list should have a unique "key" prop`
+warnings immediately above it, pointing at `<html>`, `<head>` and `<meta>`:
+those warnings only exist in React's development build, so seeing them during
+a production build is the evidence.
+
+The build script pins the value because the environment comes from the control
+panel and is therefore not under this repository's control at deploy time. The
+runtime still reads `NODE_ENV` normally, so `NODE_ENV=production` in the panel
+is still required -- `server/config.mjs` refuses to boot an `https://`
+`APP_URL` without it.
+
+### --webpack
 
 ```
 Attempted to load @next/swc-linux-x64-gnu, but an error occurred:
@@ -75,6 +99,11 @@ platform". The `--webpack` flag is the fix Next.js itself recommends in that
 error. It produces an identical route table -- same pages prerendered as
 static, same routes server-rendered on demand -- and the build is slower
 locally, which is a fair trade for building at all on the target.
+
+The `GLIBC_2.29 not found` lines stay in the build log afterwards, repeated
+once per worker. They are noise: the WebAssembly fallback works, and the build
+reports `Compiled successfully`. Do not go looking for them as the cause of a
+later failure.
 
 ## Environment variables
 

@@ -69,6 +69,18 @@ if(/[<>]/.test(config.mongoUri)) throw new Error('MONGODB_URI still contains <an
 // happily create and use an empty database named after your user.
 if(/[\\/. "$*<>:|?]/.test(config.mongoDbName)) throw new Error('MONGODB_DB_NAME contains a character MongoDB does not allow in a database name');
 if(config.production && !config.origin.startsWith('https://')) throw new Error('Production requires an HTTPS APP_URL');
+/*
+  The symmetric mistake, and the one a hosting control panel actually produces:
+  an https:// APP_URL with NODE_ENV still at development.
+
+  Nothing else here would refuse it, and the deployment would come up subtly
+  wrong rather than visibly broken. index.mjs would start Next.js in dev mode
+  and ignore the production build; the session cookie would lose its Secure
+  flag, so it would travel in clear text on any downgraded request; and the
+  page CSP would widen to allow 'unsafe-eval' and ws://localhost. None of that
+  is visible from the outside, which is exactly why it is worth a boot failure.
+*/
+if(!config.production && config.origin.startsWith('https://')) throw new Error(`APP_URL is ${config.origin}, which is a deployed site, but NODE_ENV is '${process.env.NODE_ENV||'unset'}'. Set NODE_ENV=production.`);
 if(!['INR','USD'].includes(config.currency)) throw new Error('STORE_CURRENCY must be INR or USD');
 if(!config.production && process.env.RAZORPAY_KEY_ID?.startsWith('rzp_live_')) throw new Error('Live payment keys are forbidden in development');
 if(config.mediaEnabled && config.mediaCloud !== (process.env.CLOUDINARY_CLOUD_NAME || '')) throw new Error('CLOUDINARY_CLOUD_NAME may only contain letters, digits, hyphens and underscores');
