@@ -380,8 +380,8 @@ Ordered by what blocks a real payment first.
    Checkout refuses in production without them.
 5. **HTTPS** — live mode requires `NODE_ENV=production` and an `https://`
    `APP_URL`; startup enforces it.
-6. **PostgreSQL** — `DATABASE_URL`. The embedded PGlite database is development
-   only and a single process owns it.
+6. **MongoDB** — `MONGODB_URI` and `MONGODB_DB_NAME`, pointed at the production
+   database. Startup refuses to boot without a connection string.
 
 ### GST invoicing — partially implemented
 

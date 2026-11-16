@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "node scripts/stack.mjs dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "node --env-file-if-exists=.env server/index.mjs",
     "server": "node --env-file-if-exists=.env server/index.mjs --api-only",
     "web": "next dev",

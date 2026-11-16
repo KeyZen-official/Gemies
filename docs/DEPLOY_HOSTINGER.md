@@ -52,6 +52,30 @@ render and then every `/api` call would 404, because nothing would be serving
 the Express routes. The **Other** preset is what lets the entry file own the
 process.
 
+Confirm the preset took effect by reading the build log's own summary. It
+prints `Entry file:` and `Application type:`, and `Entry file: none` with
+`Application type: Next.js` means the preset is still Next.js no matter what
+the build and output dialog showed.
+
+## Why the build script says `--webpack`
+
+`npm run build` is `next build --webpack`. Next.js 16 builds with Turbopack by
+default, and Turbopack requires the native SWC binary. Hostinger's build image
+has a glibc older than the one `@next/swc-linux-x64-gnu` is compiled against,
+so that binary fails to load:
+
+```
+Attempted to load @next/swc-linux-x64-gnu, but an error occurred:
+/lib64/libm.so.6: version `GLIBC_2.29' not found
+```
+
+Next.js then falls back to its WebAssembly bindings, which webpack can use but
+Turbopack cannot, and the build dies with "Turbopack is not supported on this
+platform". The `--webpack` flag is the fix Next.js itself recommends in that
+error. It produces an identical route table -- same pages prerendered as
+static, same routes server-rendered on demand -- and the build is slower
+locally, which is a fair trade for building at all on the target.
+
 ## Environment variables
 
 Set these in the panel. Do **not** set `PORT` or `HOST`: Hostinger assigns the
