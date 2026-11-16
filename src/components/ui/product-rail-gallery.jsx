@@ -1,6 +1,7 @@
 'use client';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
+import { Button } from './Button.jsx';
 
 /**
  * An interactive clothing rail. Garments hang from a rail, swing on a spring
@@ -93,7 +94,10 @@ const MAX_H = 400;
 const MIN_WIDE_H = 200;
 const CAROUSEL_H = 340;
 
-const DEFAULT_LABELS = { front: 'Front', back: 'Back', close: 'Close', show: 'Show' };
+// `shop` labels the link out of the detail view to the garment's own page. It
+// only renders for an item that carries an `href`, so a rail used for
+// something unshoppable is unaffected.
+const DEFAULT_LABELS = { front: 'Front', back: 'Back', close: 'Close', show: 'Show', shop: 'Shop Now' };
 
 const CREW = 'M80,34 C88,45 112,45 120,34';
 
@@ -1328,7 +1332,10 @@ function Detail({ uid, item, index, total, hanger, labels, reduced, source, onLi
       if (!dialog || dialog.contains(event.target)) return;
       if (event.key === 'Escape') { event.preventDefault(); dismiss(); }
       else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') turnTo(side === 'front' ? 'back' : 'front');
-      else if (event.key === 'Tab') { const first = dialog.querySelector('button'); if (first) { event.preventDefault(); first.focus(); } }
+      // 'a[href]' as well as 'button': the Shop Now link is an anchor, and a
+      // selector of 'button' alone would tab straight past the one control in
+      // here a customer most wants to reach.
+      else if (event.key === 'Tab') { const first = dialog.querySelector('button, a[href]'); if (first) { event.preventDefault(); first.focus(); } }
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
@@ -1338,7 +1345,9 @@ function Detail({ uid, item, index, total, hanger, labels, reduced, source, onLi
     if (event.key === 'Escape') { event.preventDefault(); dismiss(); return; }
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { turnTo(side === 'front' ? 'back' : 'front'); return; }
     if (event.key !== 'Tab') return;
-    const controls = [...(dialogRef.current?.querySelectorAll('button') ?? [])].filter((node) => !node.disabled);
+    // Anchors are included so the Shop Now link is inside the focus loop. They
+    // carry no `disabled` property, so the filter passes them through.
+    const controls = [...(dialogRef.current?.querySelectorAll('button, a[href]') ?? [])].filter((node) => !node.disabled);
     const first = controls[0];
     const last = controls.at(-1);
     if (!first || !last) return;
@@ -1423,6 +1432,27 @@ function Detail({ uid, item, index, total, hanger, labels, reduced, source, onLi
               </button>
             ))}
           </div>
+
+          {/*
+            The way out of the detail view and on to buying the garment.
+
+            Without this the view was a dead end: a customer could lift a piece
+            off the rail, turn it front to back, and then had no option but to
+            close it and hunt for the same garment further down the page.
+
+            `href` comes straight from the item -- GET /api/rail sets it to
+            /product/<slug> -- so the link cannot point at a different garment
+            than the one on screen. Rendered only when the item has one.
+
+            Body scroll is locked while the dialog is open and restored by the
+            layout effect's cleanup, which runs when this navigation unmounts
+            the dialog, so no explicit dismiss is needed here.
+          */}
+          {item.href && (
+            <div className="mt-2 flex justify-center md:justify-start">
+              <Button variant="dark" href={item.href}>{labels.shop}</Button>
+            </div>
+          )}
         </div>
       </div>
     </div>,

@@ -16,6 +16,7 @@
     "taxonomy": "node --env-file-if-exists=.env scripts/taxonomy.mjs",
     "rail:backfill": "node --env-file-if-exists=.env scripts/rail-backfill.mjs",
     "admin": "node --env-file-if-exists=.env scripts/admin.mjs",
+    "publish:catalogue": "node --env-file-if-exists=.env scripts/publish-catalogue.mjs",
     "worker": "node --env-file-if-exists=.env server/worker.mjs",
     "worker:once": "node --env-file-if-exists=.env scripts/worker-once.mjs",
     "email:preview": "node --env-file-if-exists=.env scripts/email-preview.mjs",
