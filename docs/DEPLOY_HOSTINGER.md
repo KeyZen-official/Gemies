@@ -179,18 +179,46 @@ if a deploy goes live and the app does not come up.
 
 ## The job queue
 
-Set `RUN_WORKER=false` and add a **cron job** running every 5 minutes:
+Set `RUN_WORKER=true` **and** add a **cron job** running every 5 minutes:
 
 ```
 npm run worker:once
 ```
 
-The queue sends verification emails, invoices, refund notices and shipping
-reconciliation. By default the app process drains it on an internal timer, but
-managed hosting does not keep background timers alive across idling and
-redeployment, so a queue left to the timer stalls. `worker:once` does one pass
-and exits, which is what a scheduler can drive. Jobs are claimed with an atomic
-lease, so overlapping runs never take the same job twice.
+Both, not either. The queue sends verification and password-reset emails,
+invoices, refund notices and shipping reconciliation, so how long a job waits
+is something a customer feels directly.
+
+- `RUN_WORKER=true` drains the queue on a 5-second timer inside the web
+  process, which is what makes a password-reset email arrive while the customer
+  is still looking at the screen.
+- The cron job is the backstop. Managed hosting does not keep background timers
+  alive across idling and redeployment, so the in-process timer alone will
+  eventually leave a job sitting.
+
+Running both is safe. `runJob` claims each job with a single atomic
+`findOneAndUpdate` and a lease, so two workers cannot take the same job, and
+every email carries its dedupe key to Resend as an `Idempotency-Key`, so even a
+double attempt delivers once. See the header of `server/jobs.mjs`.
+
+Cron alone also works, and is the only supported option if you would rather not
+rely on an in-process timer at all. The cost is latency: with a 5-minute
+schedule a customer requesting a password reset waits up to 5 minutes for the
+email.
+
+### Diagnosing a queue that is not moving
+
+A stuck job's `attempts` count tells you which half is broken:
+
+- `attempts: 0` — nothing ever picked it up. The worker is not running at all:
+  `RUN_WORKER=false` with no cron job, or the cron job is failing before it
+  reaches the queue.
+- `attempts: 1` or more with `last_error` set — the worker is running and the
+  send itself is failing. Read `last_error`; a Resend 403 means the sending
+  domain is not verified.
+
+`npm run worker:once` drains it by hand, which is also the quickest way to
+confirm which of the two you have.
 
 ## After the first deploy
 
