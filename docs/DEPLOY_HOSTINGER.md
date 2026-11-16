@@ -86,6 +86,29 @@ runtime still reads `NODE_ENV` normally, so `NODE_ENV=production` in the panel
 is still required -- `server/config.mjs` refuses to boot an `https://`
 `APP_URL` without it.
 
+### Why Tailwind is a regular dependency
+
+`@tailwindcss/postcss` and `tailwindcss` are in `dependencies`, not
+`devDependencies`, even though nothing imports them at runtime.
+
+`npm install` omits `devDependencies` when `NODE_ENV=production`, and this host
+sets that variable for the install step as well as the build. With Tailwind
+classified as a dev dependency the install quietly drops it and the build then
+fails inside `next/font`, of all places, with a message that mentions neither
+Tailwind's role nor the install:
+
+```
+src/app/layout.jsx
+An error occurred in `next/font`.
+Error: Cannot find module '@tailwindcss/postcss'
+```
+
+The package count in the install step is the quickest way to spot this class of
+problem: a production install reports noticeably fewer packages than a local
+one. Anything needed to *build* belongs in `dependencies` here, regardless of
+whether it is imported at runtime. `mongodb-memory-server` stays a dev
+dependency because only the tests use it.
+
 ### --webpack
 
 ```
