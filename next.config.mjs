@@ -1,4 +1,4 @@
-import { apiOrigin } from './src/api-origin.js';
+import { apiOrigin, apiIsSeparate } from './src/api-origin.js';
 
 const development = process.env.NODE_ENV !== 'production';
 
@@ -24,10 +24,16 @@ const contentSecurityPolicy = [
 
 /** @type {import('next').NextConfig} */
 export default {
-  // The Express API owns /api and /uploads. Proxying both means the browser
-  // sees a single origin, which keeps the session cookie and the Origin-based
-  // CSRF check in server/security.mjs working without CORS.
+  // The Express API owns /api and /uploads. The browser must see a single
+  // origin either way, because that is what keeps the session cookie and the
+  // Origin-based CSRF check in server/security.mjs working without CORS.
+  //
+  // In the default single-process deployment that is already true: Express and
+  // this handler share one server, and Express answers both path prefixes
+  // before Next.js is reached. A rewrite there would point the server at
+  // itself, so it is only emitted when API_ORIGIN names a separate service.
   async rewrites() {
+    if (!apiIsSeparate) return [];
     return [
       { source: '/api/:path*', destination: `${apiOrigin}/api/:path*` },
       { source: '/uploads/:path*', destination: `${apiOrigin}/uploads/:path*` },

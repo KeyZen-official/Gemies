@@ -1,7 +1,13 @@
-// Runs the Express API and the Next.js web server side by side.
+// Runs the Express API and the Next.js web server side by side: the split
+// topology, used in development because next dev owns hot reloading and cannot
+// share a process with the API.
 //   node scripts/stack.mjs dev    -> API with --watch + next dev
 //   node scripts/stack.mjs start  -> API + next start (requires npm run build)
-// Next.js proxies /api and /uploads to the API, so both must be up.
+//
+// Here, and only here, Next.js proxies /api and /uploads to the API, so both
+// must be up. Deployment does not use this: `npm start` runs server/index.mjs,
+// which serves the API and the storefront from one process on one port. See
+// the header of server/index.mjs.
 import {spawn} from 'node:child_process';
 import {createServer} from 'node:net';
 
@@ -32,9 +38,22 @@ for (const [port, role] of [[apiPort, 'API'], [webPort, 'web server']]) {
   process.exit(1);
 }
 
+// Each child is told its role explicitly rather than inferring it.
+//   SERVE_WEB=false  the API process must not also start Next.js, which the
+//                    web child below already owns; two dev servers on one
+//                    project directory fight over .next.
+//   API_ORIGIN       where the web child reaches the API. Passing it here is
+//                    what makes the rewrites in next.config.mjs switch on, and
+//                    means no port is hardcoded in application source.
 const children = [
-  spawn(process.execPath, ['--env-file-if-exists=.env', ...(mode === 'dev' ? ['--watch'] : []), 'server/index.mjs'], {stdio: 'inherit'}),
-  spawn(process.execPath, [nextBin, mode, '--port', String(webPort)], {stdio: 'inherit'}),
+  spawn(process.execPath, ['--env-file-if-exists=.env', ...(mode === 'dev' ? ['--watch'] : []), 'server/index.mjs'], {
+    stdio: 'inherit',
+    env: {...process.env, SERVE_WEB: 'false', PORT: String(apiPort)},
+  }),
+  spawn(process.execPath, [nextBin, mode, '--port', String(webPort)], {
+    stdio: 'inherit',
+    env: {...process.env, API_ORIGIN: process.env.API_ORIGIN || `http://127.0.0.1:${apiPort}`},
+  }),
 ];
 
 let closing = false;
